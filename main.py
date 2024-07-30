@@ -1,5 +1,5 @@
-import requests  # Импортируем библиотеку для отправки HTTP-запросов
-from bs4 import BeautifulSoup  # Импортируем BeautifulSoup для парсинга HTML
+import requests
+from bs4 import BeautifulSoup
 import threading
 import time
 import schedule
@@ -8,12 +8,13 @@ from telebot import types
 import pickle
 import os
 
-# Ваш токен для Telegram-бота
+
+url = ['https://tech.wildberries.ru/techschool', 'https://education.tbank.ru/start/']
 TOKEN = os.getenv('TG_API_TOKEN')
 bot = telebot.TeleBot(TOKEN)
 users = []
 
-# Обработчик команды /start
+
 @bot.message_handler(commands=['start'])
 def start(message: types.Message):
     bot.send_message(message.chat.id, 'старт ')
@@ -21,54 +22,91 @@ def start(message: types.Message):
     with open('users.pkl', 'wb') as f:
         pickle.dump(users, f)
 
-# URL страницы, которую будем парсить
-url = 'https://tech.wildberries.ru/techschool'
+
+def fetch_html(i):
+    response = requests.get(url[i])
+    return response.text
 
 
-def fetch_html():
-    response = requests.get(url)  # Отправляем запрос и получаем ответ
-    return response.text  # Получаем HTML-код страницы в виде строки
-
-
-def parse_courses(html_content):
-    soup = BeautifulSoup(html_content, 'html.parser')  # Создаём объект для парсинга
-    spans = soup.find_all('span')  # Ищем все теги <span>
+def parse_wildberries(html_content):
+    soup = BeautifulSoup(html_content, 'html.parser')
+    spans = soup.find_all('span')
     return spans
 
 
-def course():
-    html_content = fetch_html()
-    spans = parse_courses(html_content)
+def parse_tbank(html_content):
+    soup = BeautifulSoup(html_content, 'html.parser')
+    p_tags = soup.find_all('p')
+    corrected_string = []
+    i = 0
+    while i < len(p_tags):
+        try:
+            corrected_string.append(p_tags[i].get_text().encode('latin').decode('utf-8'))
+            i += 1
+        except Exception as e:
+            i += 1
+    return corrected_string
+
+
+def tbank(internships):
+    html_content = fetch_html(1)
+    ps = parse_tbank(html_content)
+    total = 0
+    for i in range(len(ps)):
+        if ps[i] == "Набор открыт":
+            internships.append("Появился набор в Т-Банк: " + url[1])
+            return internships
+        elif ps[i] == "Набор закрыт":
+            total += 1
+            print(ps[i])
+            if total == 12:
+                internships.append("T-Bank: все наборы закрыты")
+    return internships
+
+
+def wildberries(internships):
+    html_content = fetch_html(0)
+    spans = parse_wildberries(html_content)
     total = 0
     for span in spans:
         if span.text == "Набор закрыт":
             total += 1
     if total < 11:
-        for user in users:
-            bot.send_message(user, "Есть курс")  # Отправляем сообщение в Telegram
+        internships.append("Появился набор в WB: " + url[0])
     else:
-        for user in users:
-            bot.send_message(user, "Курса нет")  # Отправляем сообщение в Telegram
+        internships.append("WB: все наборы закрыты")
+
+
+def All_internships():
+    internships = []
+    wildberries(internships)
+    tbank(internships)
+    string = ''
+    for el in internships:
+        string += el + "\n"
+    print(string)
+    for user in users:
+         bot.send_message(user, string)
 
 
 def foo():
-    schedule.every().day.at("10:00").do(course)    # Запускать функцию каждый час
+    #schedule.every(5).seconds.do(All_internships) # Для тестов при разработке
+    schedule.every().day.at("10:00").do(All_internships)
     while True:
         schedule.run_pending()
         time.sleep(1)
 
 
 if __name__ == '__main__':
-    #CHAT_ID = '389769794' '433677155'
     if not os.path.isfile('users.pkl'):
         with open('users.pkl', 'wb') as f:
             pickle.dump([], f)
 
     with open("users.pkl", "rb") as f:
         users = pickle.load(f)
-    # Создаем и запускаем поток для планировщика
+        users = list(set(users))
+
     thread = threading.Thread(target=foo)
     thread.start()
 
-    # Запускаем бота
     bot.polling(none_stop=True)
