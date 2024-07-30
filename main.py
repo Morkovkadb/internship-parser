@@ -12,13 +12,13 @@ import os
 url = ['https://tech.wildberries.ru/techschool', 'https://education.tbank.ru/start/']
 TOKEN = os.getenv('TG_API_TOKEN')
 bot = telebot.TeleBot(TOKEN)
-users = []
+users = set()
 
 
 @bot.message_handler(commands=['start'])
 def start(message: types.Message):
-    bot.send_message(message.chat.id, 'старт ')
-    users.append(message.chat.id)
+    bot.send_message(message.chat.id, 'В данном боте вы можете узнать об открытых наборах на стажировки в различных компаниях')
+    users.add(message.chat.id)
     with open('users.pkl', 'wb') as f:
         pickle.dump(users, f)
 
@@ -100,11 +100,10 @@ def foo():
 if __name__ == '__main__':
     if not os.path.isfile('users.pkl'):
         with open('users.pkl', 'wb') as f:
-            pickle.dump([], f)
+            pickle.dump(set(), f)
 
     with open("users.pkl", "rb") as f:
         users = pickle.load(f)
-        users = list(set(users))
 
     thread = threading.Thread(target=foo)
     thread.start()
