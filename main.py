@@ -91,7 +91,7 @@ def All_internships():
 
 def foo():
     #schedule.every(5).seconds.do(All_internships) # Для тестов при разработке
-    schedule.every().day.at("10:00").do(wildberries, tbank)
+    schedule.every().day.at("10:00").do(All_internships)
     while True:
         schedule.run_pending()
         time.sleep(1)
