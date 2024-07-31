@@ -19,13 +19,11 @@ def parse_tbank(html_content):
     soup = BeautifulSoup(html_content, 'html.parser')
     p_tags = soup.find_all('p')
     corrected_string = []
-    i = 0
-    while i < len(p_tags):
+    for p_tag in p_tags:
         try:
-            corrected_string.append(p_tags[i].get_text().encode('latin').decode('utf-8'))
-            i += 1
+            corrected_string.append(p_tag.get_text().encode('latin').decode('utf-8'))
         except Exception as e:
-            i += 1
+            continue
     return corrected_string
 
 

@@ -28,6 +28,10 @@ def start(message: types.Message):
 def menu(message: types.Message):
     send_main_menu(message.chat.id)
 
+@bot.message_handler(commands=['notifications'])
+def menu(message: types.Message):
+    send_notification_menu(message.chat.id)
+
 
 ############################## МЕНЮ ########################################
 
@@ -55,20 +59,14 @@ def handle_callback(call):
     elif call.data == "on_off":
         if chat_id in users:
             bot.send_message(chat_id, "Уведомления выключены")
-            users_without_notifications.add(chat_id)
             users.remove(chat_id)
             with open('users.pkl', 'wb') as f:
                 pickle.dump(users, f)
-            with open('users_without_notifications.pkl', 'wb') as f:
-                pickle.dump(users_without_notifications, f)
         else:
             bot.send_message(chat_id, "Уведомления включены")
             users.add(chat_id)
-            users_without_notifications.remove(chat_id)
             with open('users.pkl', 'wb') as f:
                 pickle.dump(users, f)
-            with open('users_without_notifications.pkl', 'wb') as f:
-                pickle.dump(users_without_notifications, f)
         send_notification_menu(chat_id)
     elif call.data == "back":
         send_main_menu(chat_id)
@@ -78,11 +76,11 @@ def notifications_for_users():
     string = All_internships()
     for user in users:
         bot.send_message(user, string)
-    logger.info("Notifications send to users")
+    logger.info("Notifications sent to users")
 
 
 def message_scheduler():
-    # schedule.every(5).seconds.do(notifications_for_users)
+    #schedule.every(5).seconds.do(notifications_for_users)
     schedule.every().day.at("10:00").do(notifications_for_users)
     while True:
         schedule.run_pending()
@@ -97,13 +95,6 @@ if __name__ == '__main__':
 
     with open("users.pkl", "rb") as f:
         users = pickle.load(f)
-
-    if not os.path.isfile('users_without_notifications.pkl'):
-        with open('users_without_notifications.pkl', 'wb') as f:
-            pickle.dump(set(), f)
-
-    with open("users.pkl", "rb") as f:
-        users_without_notifications = pickle.load(f)
 
     thread = threading.Thread(target=message_scheduler)
     thread.start()
